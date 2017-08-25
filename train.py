@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, TensorBoard
 from sklearn.model_selection import train_test_split
-
 import params
 
 input_size = params.input_size
@@ -14,7 +13,7 @@ model = params.model
 df_train = pd.read_csv('input/train_masks.csv')
 ids_train = df_train['img'].map(lambda s: s.split('.')[0])
 
-ids_train_split, ids_valid_split = train_test_split(ids_train, test_size=0.2, random_state=42)
+ids_train_split, ids_valid_split = train_test_split(ids_train, test_size=0.2, random_state=1145141919)
 
 print('Training on {} samples'.format(len(ids_train_split)))
 print('Validating on {} samples'.format(len(ids_valid_split)))
@@ -85,6 +84,56 @@ def randomHorizontalFlip(image, mask, u=0.5):
     return image, mask
 
 
+LUT_HC = np.arange(256, dtype = 'uint8' )
+LUT_LC = np.arange(256, dtype = 'uint8' )
+min_table = 50
+max_table = 205
+diff_table = max_table - min_table
+
+for i in range(0, min_table):
+    LUT_HC[i] = 0
+for i in range(min_table, max_table):
+    LUT_HC[i] = 255 * (i - min_table) / diff_table
+for i in range(max_table, 255):
+    LUT_HC[i] = 255
+
+for i in range(256):
+    LUT_LC[i] = min_table + i * (diff_table) / 255
+
+def changeContrast(image, u=0.5):
+    if np.random.random() < u:
+        image = cv2.LUT(image, LUT_HC if np.random.random() < u else LUT_LC)
+    return image
+
+LUT_G1 = np.zeros((256, 1), dtype = 'uint8' )
+LUT_G2 = np.zeros((256, 1), dtype = 'uint8' )
+gamma1 = 0.75
+gamma2 = 1.5
+for i in range(256):
+    LUT_G1[i] = 255 * pow(float(i) / 255, 1.0 / gamma1)
+    LUT_G2[i] = 255 * pow(float(i) / 255, 1.0 / gamma2)
+
+def changeGamma(image, u=0.5):
+    if np.random.random() < u:
+        image = cv2.LUT(image, LUT_G1 if np.random.random() < u else LUT_G2)
+    return image
+
+def saltpepper(image, u=0.5):
+    if np.random.random() < u:
+        s_vs_p = 0.5
+        amount = 0.004
+
+        num_salt = np.ceil(amount * image.size * s_vs_p)
+        coords = [np.random.randint(0, i-1 , int(num_salt)) for i in image.shape]
+        image[coords[:-1]] = (255,255,255)
+
+        num_pepper = np.ceil(amount* image.size * (1. - s_vs_p))
+        coords = [np.random.randint(0, i-1 , int(num_pepper)) for i in image.shape]
+        image[coords[:-1]] = (0,0,0)
+        
+    return image
+
+    
 def train_generator():
     while True:
         for start in range(0, len(ids_train_split), batch_size):
@@ -106,11 +155,16 @@ def train_generator():
                                                    scale_limit=(-0.1, 0.1),
                                                    rotate_limit=(-0, 0))
                 img, mask = randomHorizontalFlip(img, mask)
+
+                img = changeContrast(img)
+                img = changeGamma(img)
+                img = saltpepper(img)
+                
                 mask = np.expand_dims(mask, axis=2)
                 x_batch.append(img)
                 y_batch.append(mask)
-            x_batch = np.array(x_batch, np.float32) / 255
-            y_batch = np.array(y_batch, np.float32) / 255
+            x_batch = np.array(x_batch, np.float16) / 255
+            y_batch = np.array(y_batch, np.float16) / 255
             yield x_batch, y_batch
 
 
@@ -129,8 +183,8 @@ def valid_generator():
                 mask = np.expand_dims(mask, axis=2)
                 x_batch.append(img)
                 y_batch.append(mask)
-            x_batch = np.array(x_batch, np.float32) / 255
-            y_batch = np.array(y_batch, np.float32) / 255
+            x_batch = np.array(x_batch, np.float16) / 255
+            y_batch = np.array(y_batch, np.float16) / 255
             yield x_batch, y_batch
 
 
@@ -146,7 +200,7 @@ callbacks = [EarlyStopping(monitor='val_dice_loss',
                                epsilon=1e-4,
                                mode='max'),
              ModelCheckpoint(monitor='val_dice_loss',
-                             filepath='weights/best_weights.hdf5',
+                             filepath='weights/best_weights_0825.hdf5',
                              save_best_only=True,
                              save_weights_only=True,
                              mode='max'),

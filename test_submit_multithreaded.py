@@ -38,7 +38,12 @@ def run_length_encode(mask):
 
 rles = []
 
+model = params.get_unet_1024()
 model.load_weights(filepath='weights/best_weights.hdf5')
+
+model2 = params.get_unet_1024()
+model2.load_weights(filepath='weights2/best_weights.hdf5')
+
 graph = tf.get_default_graph()
 
 q_size = 10
@@ -62,13 +67,16 @@ def predictor(q, ):
         x_batch = q.get()
         with graph.as_default():
             preds = model.predict_on_batch(x_batch)
+        with graph.as_default():
+            preds2 = model2.predict_on_batch(x_batch)
+        preds = [(pred + preds2[i]) / 2 for i, pred in enumerate(preds)]
         preds = np.squeeze(preds, axis=3)
-        for pred in preds:
+        for i, pred in enumerate(preds):
             prob = cv2.resize(pred, (orig_width, orig_height))
             mask = prob > threshold
             rle = run_length_encode(mask)
             rles.append(rle)
-
+          
 
 q = queue.Queue(maxsize=q_size)
 t1 = threading.Thread(target=data_loader, name='DataLoader', args=(q,))

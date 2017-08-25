@@ -34,9 +34,9 @@ def run_length_encode(mask):
 
 
 rles = []
-path = 'weights2/best_weights.hdf5'
-model.load_weights(filepath=path)
-print(path)
+#path = 'weights2/best_weights.hdf5'
+#model.load_weights(filepath=path)
+#print(path)
 
 print('Predicting on {} samples with batch_size = {}...'.format(len(ids_test), batch_size))
 for start in tqdm(range(0, len(ids_test), batch_size)):
@@ -44,15 +44,9 @@ for start in tqdm(range(0, len(ids_test), batch_size)):
     end = min(start + batch_size, len(ids_test))
     ids_test_batch = ids_test[start:end]
     for id in ids_test_batch.values:
-        img = cv2.imread('input/test/{}.jpg'.format(id))
-        img = cv2.resize(img, (input_size, input_size))
-        x_batch.append(img)
-    x_batch = np.array(x_batch, np.float32) / 255
-    preds = model.predict_on_batch(x_batch)
-    preds = np.squeeze(preds, axis=3)
-    for pred in preds:
+        pred = cv2.imread('data/test/{}.png'.format(id), cv2.IMREAD_GRAYSCALE)
         prob = cv2.resize(pred, (orig_width, orig_height))
-        mask = prob > threshold
+        mask = prob > 127 #threshold
         rle = run_length_encode(mask)
         rles.append(rle)
 

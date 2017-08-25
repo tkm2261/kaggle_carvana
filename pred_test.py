@@ -4,6 +4,14 @@ import pandas as pd
 from tqdm import tqdm
 
 import params
+"""
+import tensorflow as tf
+from keras import backend as K
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+sess = tf.Session(config=config)
+K.set_session(sess)
+"""
 
 input_size = params.input_size
 batch_size = params.batch_size
@@ -34,10 +42,9 @@ def run_length_encode(mask):
 
 
 rles = []
-path = 'weights2/best_weights.hdf5'
-model.load_weights(filepath=path)
-print(path)
 
+model.load_weights(filepath='weights/best_weights_0824.hdf5')
+import pickle
 print('Predicting on {} samples with batch_size = {}...'.format(len(ids_test), batch_size))
 for start in tqdm(range(0, len(ids_test), batch_size)):
     x_batch = []
@@ -49,13 +56,7 @@ for start in tqdm(range(0, len(ids_test), batch_size)):
         x_batch.append(img)
     x_batch = np.array(x_batch, np.float32) / 255
     preds = model.predict_on_batch(x_batch)
-    preds = np.squeeze(preds, axis=3)
-    for pred in preds:
-        prob = cv2.resize(pred, (orig_width, orig_height))
-        mask = prob > threshold
-        rle = run_length_encode(mask)
-        rles.append(rle)
-
-print("Generating submission file...")
-df = pd.DataFrame({'img': names, 'rle_mask': rles})
-df.to_csv('submit/submission.csv.gz', index=False, compression='gzip')
+    for i, id in enumerate(ids_test_batch.values):
+        im = preds[i]
+        im = np.around(im * 255).astype(np.uint8)
+        cv2.imwrite('data/test_0824/{}.png'.format(id), im)
