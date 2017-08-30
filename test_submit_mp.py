@@ -72,12 +72,13 @@ def fill(ax, img, cnt=0):
 
 
 def exe(id):
-    pred3 = cv2.imread('data/test_0824/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)    
-    pred = cv2.imread('data/test_0822/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)
+    #pred3 = cv2.imread('data/test_0824/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)    
+    pred = cv2.imread('data/test_0825/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)
+    pred3 = cv2.imread('data/test_0825/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)    
     pred1 = cv2.imread('data/test/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)
     pred2 = cv2.imread('data/test2/{}.png'.format(id), cv2.IMREAD_GRAYSCALE).astype(float)
     pred = (pred + pred1 + pred2 + pred3) / 4
-    cv2.imwrite('data/test_ens_0825/{}.png'.format(id), pred.astype(np.uint8))
+    #cv2.imwrite('data/test_ens_0825/{}.png'.format(id), pred.astype(np.uint8))
         
     prob = cv2.resize(pred, (orig_width, orig_height))
         
